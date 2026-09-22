@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriDetective: O Show da Saúde</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: linear-gradient(135deg, #A8E6CF 0%, #FAF3E0 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; color: #2c3e50; }
+  .game-container { background: #FAF3E0; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-width: 800px; width: 100%; padding: 30px; border: 3px solid #D4A574; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #A8E6CF; }
+  .logo { font-size: 1.4em; font-weight: bold; color: #2c3e50; }
+  .logo span { color: #FF6B6B; }
+  .stats { display: flex; gap: 15px; font-size: 0.9em; }
+  .stat { background: #A8E6CF; padding: 5px 12px; border-radius: 20px; font-weight: bold; }
+  .stat.coins { background: #FFD93D; }
+  .patient-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; border-left: 6px solid #FF6B6B; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  .patient-card h2 { color: #FF6B6B; margin-bottom: 10px; font-size: 1.2em; }
+  .patient-card p { margin-bottom: 8px; line-height: 1.5; font-size: 0.95em; }
+  .patient-card .complaint { font-style: italic; background: #FFF9E6; padding: 12px; border-radius: 8px; border-left: 3px solid #FFD93D; margin-top: 10px; }
+  .question-box { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; font-size: 1.05em; line-height: 1.5; }
+  .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .option { background: white; border: 2px solid #D4A574; border-radius: 12px; padding: 15px 20px; cursor: pointer; transition: all 0.3s; display: flex; align-items: flex-start; gap: 12px; text-align: left; font-size: 0.95em; line-height: 1.4; }
+  .option:hover { background: #A8E6CF; transform: translateX(5px); border-color: #2c3e50; }
+  .option.correct { background: #A8E6CF; border-color: #27ae60; }
+  .option.wrong { background: #FF6B6B; border-color: #c0392b; color: white; }
+  .option.disabled { pointer-events: none; opacity: 0.6; }
+  .option-letter { background: #2c3e50; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+  .option.correct .option-letter { background: #27ae60; }
+  .option.wrong .option-letter { background: #c0392b; }
+  .feedback { padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; line-height: 1.5; font-size: 0.95em; }
+  .feedback.show { display: block; }
+  .feedback.success { background: #A8E6CF; border-left: 5px solid #27ae60; }
+  .feedback.error { background: #FFE5E5; border-left: 5px solid #FF6B6B; }
+  .btn { background: #2c3e50; color: white; border: none; padding: 14px 30px; border-radius: 12px; font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.3s; width: 100%; margin-top: 10px; }
+  .btn:hover { background: #FF6B6B; transform: translateY(-2px); }
+  .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #A8E6CF, #27ae60); transition: width 0.5s; border-radius: 4px; }
+  .hidden { display: none !important; }
+  .letter { background: linear-gradient(135deg, #FFF9E6 0%, #FAF3E0 100%); border: 3px solid #FFD93D; border-radius: 16px; padding: 25px; margin: 20px 0; font-style: italic; line-height: 1.8; }
+  .letter h3 { color: #FF6B6B; margin-bottom: 15px; font-style: normal; font-size: 1.1em; }
+  .victory { text-align: center; padding: 30px; }
+  .victory h1 { font-size: 2em; color: #27ae60; margin-bottom: 15px; }
+  .confetti { font-size: 3em; margin: 20px 0; }
+  .round-indicator { text-align: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
+  .ilustration { background: #2c3e50; color: #A8E6CF; padding: 20px; border-radius: 12px; margin: 15px 0; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.6; border-left: 4px solid #FFD93D; }
+  .ilustration strong { color: #FFD93D; }
+  .exams { background: white; padding: 15px; border-radius: 12px; margin: 15px 0; border: 1px solid #D4A574; font-size: 0.85em; overflow-x: auto; }
+  .exams table { width: 100%; border-collapse: collapse; }
+  .exams th { background: #2c3e50; color: white; padding: 8px; text-align: left; }
+  .exams td { padding: 8px; border-bottom: 1px solid #eee; }
+  .exams .altered { color: #FF6B6B; font-weight: bold; }
+
+  /* Widget Padovani DRI flutuante */
+  .padovani-widget {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1000;
+    width: min(220px, 28vw);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+    border: 2px solid #2c3e50;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    background: #1a2e1a;
+    text-decoration: none;
+    display: block;
+  }
+  .padovani-widget:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.3);
+  }
+  .padovani-widget img {
+    display: block;
+    width: 100%;
+    height: auto;
+    vertical-align: middle;
+  }
+  .padovani-widget .caption {
+    background: linear-gradient(135deg, #2f3b24, #4a5d34);
+    color: #e8f0d8;
+    font-size: 0.72em;
+    font-weight: 700;
+    text-align: center;
+    padding: 8px 6px;
+    letter-spacing: 0.3px;
+  }
+  @media (max-width: 900px) {
+    .padovani-widget {
+      width: 140px;
+      top: 12px;
+      right: 12px;
+    }
+    .padovani-widget .caption { font-size: 0.65em; padding: 6px 4px; }
+  }
+  @media (max-width: 560px) {
+    .padovani-widget {
+      position: static;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto 16px;
+      order: -1;
+    }
+    body { flex-direction: column; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Atalho para a Calculadora Padovani DRI -->
+<a class="padovani-widget" href="https://padovani-dri.onrender.com/" target="_blank" rel="noopener noreferrer" title="Abrir Calculadora Padovani DRI">
+  <img src="https://i.imgur.com/hla5e8g.png" alt="Padovani DRI — Calculadora de micronutrientes" width="220" height="auto" loading="lazy">
+  <div class="caption">📊 Abrir Padovani DRI</div>
+</a>
+
+
+
+<div class="game-container">
+  <div class="header">
+    <div class="logo">🔍 Nutri<span>Detective</span></div>
+    <div class="stats">
+      <div class="stat" id="caseDisplay">Caso 1/25</div>
+      <div class="stat coins" id="coinsDisplay">💎 0</div>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+  </div>
+  <div class="round-indicator" id="roundIndicator">RODADA 1 DE 4 — ANAMNESE</div>
+  <div id="gameContent"></div>
+</div>
+
+<script>
+// ==================== BANCO DE DADOS DOS 25 CASOS ====================
+const casos = [
+  // CASO 1 — MANOEL
+  { id: 1, paciente: "Sr. Manoel Ribeiro, 58 anos, ex-operário de fábrica",
+    queixa: "Doutor(a), eu ando tão fraco que não consigo nem ir na feira. Minha esposa diz que eu estou amarelo, e minha boca vive ardendo. Eu só como o que sempre comi a vida toda...",
+    sintomas: "Cansaço extremo, falta de ar, palidez, tontura, formigamento, língua dolorida, unhas quebradiças, queda de cabelo.",
+    dietas: {
+      A: "Dieta do Trabalhador de Fábrica: Pão com margarina + café preto; arroz, feijão, bife bem passado, farofa e refrigerante; bolacha recheada + suco de caixinha; macarrão com salsicha. Quase zero frutas, verduras, ovos, leite, peixes.",
+      B: "Dieta da Esposa — Cozinha Mineira: Pão de queijo, café com leite, mamão; arroz, feijão, couve, ovo frito, angu, carne de porco; bolo de fubá; sopa de legumes com frango.",
+      C: "Dieta da Cantina (versão antiga): Café preto; marmita de arroz, feijão, farinha e carne seca; jantar de arroz, feijão e ovo cozido.",
+      D: "Dieta da Fábrica + Churrasco: Pão com mortadela e café com leite; arroz, feijão, batata frita, carne, salada; fruta; churrasco com cerveja."
+    },
+    q1: { pergunta: "Qual dieta foi a responsável por depletar os nutrientes do paciente?", correta: "A", explicacao: "A Dieta do Trabalhador de Fábrica é monótona, pobre em ferro heme, B12, folato e vitamina C. Causou anemia megaloblástica." },
+    ilustracao: "Pele amarelo-pálida, tom ceroso. Língua vermelha-viva, lisa e brilhante (glossite de Hunter). Fissuras nos cantos da boca. Unhas com formato de colher (coiloníquia).",
+    exames: [
+      { nome: "Hemoglobina", valor: "8,2 g/dL", ref: "13–17", alt: true },
+      { nome: "VCM", valor: "118 fL", ref: "80–100", alt: true },
+      { nome: "Ferritina", valor: "8 ng/mL", ref: "30–300", alt: true },
+      { nome: "Vitamina B12", valor: "95 pg/mL", ref: "200–900", alt: true }
+    ],
+    q2: { pergunta: "Qual é a Patologia e a Carência Nutricional exata?",
+      opcoes: { A: "Anemia ferropriva isolada", B: "Anemia megaloblástica por B12 e folato", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "VCM alto + B12 e folato baixos = anemia megaloblástica." },
+    q3: { pergunta: "Qual protocolo de tratamento você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia Brasileira", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: B12 IM + ferro + folato + dieta + fitoterápicos + acupuntura." },
+    carta: "Querido(a) Doutor(a) Nutricionista,\n\nQuando cheguei ao hospital, eu achava que era o fim. Você não olhou só o exame. Você olhou para MIM. Hoje eu como feijão com couve, ovo, laranja. Voltei a sentir o gosto da vida.\n\nObrigado por ser um detetive da saúde.\n\nManoel Ribeiro"
+  },
+
+  // CASO 2 — ANA
+  { id: 2, paciente: "Ana Lima, 24 anos, vegana estrita há 3 anos",
+    queixa: "Minhas pernas formigam o tempo todo e eu esqueço as coisas.",
+    sintomas: "Fadiga, palidez, formigamento, perda de memória, língua lisa, unhas quebradiças.",
+    dietas: {
+      A: "Dieta Vegana Completa: Aveia com banana, chia e leite de soja fortificado; arroz, feijão, tofu, couve, laranja; castanhas; quinoa, grão-de-bico, espinafre. Suplementa B12.",
+      B: "Dieta Vegana Fast-Food: Pão branco, margarina vegetal, café; hambúrguer de soja industrializado + batata frita; bolacha vegana; pizza vegana congelada.",
+      C: "Dieta Vegana Crua Restritiva: Suco verde; salada crua; fruta; salada crua + abacate; chá. Zero fortificados, zero suplementação.",
+      D: "Dieta Vegana com Ovos e Laticínio: Pão com ovo + leite; arroz, feijão, queijo, salada."
+    },
+    q1: { pergunta: "Qual dieta foi a responsável pela carência de Ana?", correta: "C", explicacao: "Dieta crua restritiva é pobre em B12, ferro heme e zinco." },
+    ilustracao: "Pele pálida com tom amarelado. Língua lisa, brilhante, vermelho-viva (glossite). Reflexos profundos diminuídos.",
+    exames: [
+      { nome: "Hemoglobina", valor: "9,1 g/dL", ref: "12–16", alt: true },
+      { nome: "VCM", valor: "112 fL", ref: "80–100", alt: true },
+      { nome: "Vitamina B12", valor: "88 pg/mL", ref: "200–900", alt: true },
+      { nome: "Homocisteína", valor: "25 µmol/L", ref: "< 15", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia de Ana?",
+      opcoes: { A: "Anemia megaloblástica por B12", B: "Anemia ferropriva", C: "Escorbuto", D: "Raquitismo" },
+      correta: "A", explicacao: "VCM alto + B12 baixa + homocisteína elevada = megaloblástica." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: B12 IM + ferro + folato + dieta fortificada + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu tinha medo de que ser vegana fosse um erro. Você me mostrou que o erro era a falta de cuidado. Hoje suplemento B12 e continuo vegana de verdade.\n\nAna"
+  },
+
+  // CASO 3 — PEDRO
+  { id: 3, paciente: "Pedro, 8 anos, seletivo alimentar",
+    queixa: "Ele tropeça muito à noite, não enxerga no escuro. E vive com infecção.",
+    sintomas: "Cegueira noturna, ressecamento ocular, manchas brancas na esclera, pele seca.",
+    dietas: {
+      A: "Dieta Balanceada Infantil: Leite, pão integral, mamão; arroz, feijão, cenoura, ovo, laranja.",
+      B: "Dieta do 'Só Pão e Macarrão': Pão branco com margarina; macarrão com molho industrializado; bolacha recheada; pão com queijo. Zero frutas, verduras.",
+      C: "Dieta Rica em Frituras: Pão com ovo frito; arroz, feijão, batata frita, nuggets; pizza.",
+      D: "Dieta Vegetariana Infantil: Leite com aveia; arroz, lentilha, cenoura, brócolis."
+    },
+    q1: { pergunta: "Qual dieta causou a carência de Pedro?", correta: "B", explicacao: "Dieta monótona, zero em vitamina A." },
+    ilustracao: "Conjuntiva seca com manchas de Bitot. Córnea opaca. Pele seca e escamosa.",
+    exames: [
+      { nome: "Retinol sérico", valor: "0,45 µmol/L", ref: "1,05–2,80", alt: true },
+      { nome: "Zinco", valor: "60 µg/dL", ref: "70–120", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia de Pedro?",
+      opcoes: { A: "Anemia", B: "Raquitismo", C: "Xeroftalmia por deficiência de vitamina A", D: "Escorbuto" },
+      correta: "C", explicacao: "Retinol baixo + cegueira noturna + manchas de Bitot = xeroftalmia." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia (buriti)", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: retinol + dieta + buriti + zinco + acupuntura." },
+    carta: "Tio(a) Nutricionista, agora eu consigo ver as estrelas! Obrigado por me ensinar a comer cenoura, abóbora e ovo.\n\nPedro"
+  },
+
+  // CASO 4 — DONA CIDA
+  { id: 4, paciente: "Dona Cida, 71 anos, viúva",
+    queixa: "Minhas pernas doem e eu vivo caindo. Acho que é a idade.",
+    sintomas: "Dor óssea, fraqueza, quedas, fraturas, humor deprimido.",
+    dietas: {
+      A: "Dieta da Solidão: Café preto com bolacha; arroz com ovo frito; pão com chá. Raramente sai para tomar sol.",
+      B: "Dieta Tradicional Completa: Leite, pão, fruta; arroz, feijão, carne, salada; sopa. Toma sol.",
+      C: "Dieta Rica em Cálcio: Iogurte, queijo, leite; sardinha, brócolis, tofu. Toma sol.",
+      D: "Dieta Vegetariana: Leite de soja; arroz, lentilha, couve; tofu. Toma sol."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Dona Cida?", correta: "A", explicacao: "Dieta pobre em cálcio + zero sol = deficiência de vitamina D." },
+    ilustracao: "Cifose acentuada. Marcha lenta. Músculos atrofiados. Radiografia: osteopenia difusa.",
+    exames: [
+      { nome: "25-OH-Vitamina D", valor: "8 ng/mL", ref: "> 30", alt: true },
+      { nome: "Cálcio sérico", valor: "8,2 mg/dL", ref: "8,5–10,5", alt: true },
+      { nome: "PTH", valor: "elevado", ref: "normal", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Osteomalácia + osteoporose por deficiência de D", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "Vitamina D baixa + cálcio baixo + PTH elevado = osteomalácia." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: D + cálcio + dieta + sol + fitoterápicos + exercício." },
+    carta: "Doutor(a), eu tinha parado de viver quando meu marido morreu. Você me mostrou que eu ainda tinha vida para viver.\n\nCida"
+  },
+
+  // CASO 5 — JOÃO
+  { id: 5, paciente: "João, 34 anos, etilista crônico",
+    queixa: "Minhas pernas formigam e eu não consigo lembrar das coisas.",
+    sintomas: "Confusão mental, visão dupla, ataxia, edema, taquicardia.",
+    dietas: {
+      A: "Dieta Balanceada: Arroz, feijão, carne, salada, frutas, leite.",
+      B: "Dieta Vegetariana: Leguminosas, cereais, ovos, leite.",
+      C: "Dieta Hiperproteica: Carnes, ovos, queijos, whey.",
+      D: "Dieta do Etilista: Café preto + cachaça; farofa com charque; cachaça + pão. Zero vegetais, frutas."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de João?", correta: "D", explicacao: "Álcool destrói tiamina (B1). Dieta pobre + álcool = beribéri." },
+    ilustracao: "Nistagmo, paralisia do olhar lateral. Marcha atáxica. Edema bilateral. Taquicardia.",
+    exames: [
+      { nome: "Tiamina (B1)", valor: "25 nmol/L", ref: "70–180", alt: true },
+      { nome: "Albumina", valor: "2,5 g/dL", ref: "3,5–5,0", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Beribéri com Wernicke-Korsakoff", B: "Anemia", C: "Escorbuto", D: "Raquitismo" },
+      correta: "A", explicacao: "Tiamina baixa + confusão + ataxia = Wernicke-Korsakoff." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: tiamina IV + complexo B + dieta + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que cachaça era meu remédio. Você me mostrou que ela me matava. Hoje lembro do nome dos meus filhos.\n\nJoão"
+  },
+
+  // CASO 6 — MARINA
+  { id: 6, paciente: "Marina, 19 anos, anorexia nervosa",
+    queixa: "Meu cabelo está caindo e minhas feridas não saram.",
+    sintomas: "Caquexia, queda de cabelo, unhas quebradiças, feridas, amenorreia.",
+    dietas: {
+      A: "Dieta Equilibrada: Leite, pão, fruta; arroz, feijão, carne, salada.",
+      B: "Dieta Cetogênica Orientada: Baixo carbo, alto gordura.",
+      C: "Dieta Restritiva de Baixíssima Caloria: Café preto; 1 folha de alface; chá + 1 maçã. Menos de 500 kcal/dia.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, leite, cereais."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Marina?", correta: "C", explicacao: "Restrição severa + zero proteína e zinco." },
+    ilustracao: "Caquexia, IMC 14. Cabelo ralo. Unhas com linhas de Beau. Pele seca com feridas.",
+    exames: [
+      { nome: "Albumina", valor: "2,8 g/dL", ref: "3,5–5,0", alt: true },
+      { nome: "Zinco", valor: "55 µg/dL", ref: "70–120", alt: true },
+      { nome: "IMC", valor: "14,2", ref: "18,5–24,9", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Desnutrição proteico-calórica + deficiência de zinco", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "Albumina baixa + zinco baixo + IMC 14 = desnutrição." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: realimentação + zinco + proteína + suporte psicológico + acupuntura." },
+    carta: "Doutor(a), eu tinha medo de comer. Você me mostrou que comida é remédio. Obrigada por me salvar de mim mesma.\n\nMarina"
+  },
+
+  // CASO 7 — SR. ANTÔNIO
+  { id: 7, paciente: "Sr. Antônio, 62 anos, ICC em uso de furosemida",
+    queixa: "Minhas pernas vivem dando cãibra e meu coração dispara.",
+    sintomas: "Cãibras, fraqueza, palpitações, constipação.",
+    dietas: {
+      A: "Dieta Pobre em Potássio e Magnésio: Pão branco; arroz branco, frango, batata; macarrão. Zero banana, folhas, castanhas, feijão.",
+      B: "Dieta Rica em Potássio: Banana, laranja, feijão, batata-doce, folhas verdes.",
+      C: "Dieta Mediterrânea: Azeite, peixes, castanhas, vegetais.",
+      D: "Dieta Hiperproteica: Carnes, ovos, queijos."
+    },
+    q1: { pergunta: "Qual dieta agravou a carência do Sr. Antônio?", correta: "A", explicacao: "Furosemida elimina K e Mg. Dieta pobre agrava." },
+    ilustracao: "Músculos atrofiados com fasciculações. ECG com extrasístoles. Pele seca.",
+    exames: [
+      { nome: "Potássio", valor: "2,9 mEq/L", ref: "3,5–5,0", alt: true },
+      { nome: "Magnésio", valor: "1,2 mg/dL", ref: "1,7–2,2", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Raquitismo", C: "Hipocalemia + hipomagnesemia", D: "Escorbuto" },
+      correta: "C", explicacao: "K e Mg baixos por diurético." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: reposição de K e Mg + dieta + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que era só o remédio do coração. Você me mostrou que o corpo precisa de minerais. As cãibras sumiram.\n\nAntônio"
+  },
+
+  // CASO 8 — LUNA
+  { id: 8, paciente: "Luna, 3 anos, excesso de leite de vaca",
+    queixa: "Ela só quer leite. Não come nada. Está muito pálida e cansada.",
+    sintomas: "Palidez, cansaço, irritabilidade, atraso no crescimento, geofagia.",
+    dietas: {
+      A: "Dieta Balanceada Infantil: Leite 500ml + papinha + carne + fruta.",
+      B: "Dieta de Leite de Vaca Exclusivo: 1,5 L de leite por dia. Nada mais.",
+      C: "Dieta Vegetariana Infantil: Leguminosas, ovos, leite, frutas.",
+      D: "Dieta Fast-Food Infantil: Nuggets, batata, refrigerante."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Luna?", correta: "B", explicacao: "Leite em excesso inibe absorção de ferro." },
+    ilustracao: "Pele pálida, amarelada. Conjuntivas descoradas. Unhas coiloníquia. Come terra.",
+    exames: [
+      { nome: "Hemoglobina", valor: "6,8 g/dL", ref: "11,5–14,5", alt: true },
+      { nome: "Ferritina", valor: "4 ng/mL", ref: "15–150", alt: true },
+      { nome: "VCM", valor: "68 fL", ref: "75–87", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia ferropriva grave por excesso de leite", B: "Anemia megaloblástica", C: "Escorbuto", D: "Raquitismo" },
+      correta: "A", explicacao: "Leite em excesso + zero ferro heme = anemia ferropriva." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: ferro + vitamina C + restrição de leite + dieta + fitoterápicos." },
+    carta: "Tio(a) Nutri, agora eu como feijão e laranja. Minha mãe diz que estou corada. Obrigada!\n\nLuna"
+  },
+
+  // CASO 9 — RICARDO
+  { id: 9, paciente: "Ricardo, 45 anos, pós-bypass há 2 anos",
+    queixa: "Estou fraco, com formigamento e perdi cabelo.",
+    sintomas: "Fadiga, formigamento, queda de cabelo, dor óssea, diarreia.",
+    dietas: {
+      A: "Dieta Bariátrica Completa: Proteína em todas refeições + suplementação de B12, ferro, cálcio, D.",
+      B: "Dieta Bariátrica sem Suplementação: Pequenas porções de proteína, mas zero suplementação.",
+      C: "Dieta Hiperproteica: Carnes, ovos, whey.",
+      D: "Dieta Vegetariana: Leguminosas, ovos."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Ricardo?", correta: "B", explicacao: "Bypass reduz absorção. Sem suplementação = carência múltipla." },
+    ilustracao: "Cabelo ralo, unhas quebradas. Pele pálida. Pernas formigando.",
+    exames: [
+      { nome: "B12", valor: "90 pg/mL", ref: "200–900", alt: true },
+      { nome: "Ferritina", valor: "8 ng/mL", ref: "30–300", alt: true },
+      { nome: "Cálcio", valor: "8,0 mg/dL", ref: "8,5–10,5", alt: true },
+      { nome: "Vitamina D", valor: "12 ng/mL", ref: "> 30", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia isolada", B: "Carência múltipla pós-bariátrica", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "B12 + ferro + cálcio + D baixos." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: B12 IM + ferro + cálcio + D + dieta + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que a cirurgia tinha resolvido tudo. Você me mostrou que ela é só o começo. Hoje me sinto vivo de novo.\n\nRicardo"
+  },
+
+  // CASO 10 — DONA ROSA
+  { id: 10, paciente: "Dona Rosa, 68 anos, não sai ao sol há 5 anos",
+    queixa: "Meus ossos doem o tempo todo. Não consigo nem dormir.",
+    sintomas: "Dor óssea, fraqueza muscular, dificuldade de subir escadas.",
+    dietas: {
+      A: "Dieta Sem Sol: Pão com margarina; arroz, feijão, frango; sopa. Zero exposição solar. Pouco cálcio.",
+      B: "Dieta Rica em Cálcio: Leite, queijo, sardinha, brócolis + sol.",
+      C: "Dieta Mediterrânea: Azeite, peixes, vegetais + sol.",
+      D: "Dieta Vegetariana: Leguminosas, ovos + sol."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Dona Rosa?", correta: "A", explicacao: "Zero sol = zero vitamina D = osteomalácia." },
+    ilustracao: "Marcha de pato. Músculos fracos. Ossos doloridos à palpação.",
+    exames: [
+      { nome: "25-OH-D", valor: "6 ng/mL", ref: "> 30", alt: true },
+      { nome: "Cálcio", valor: "8,1 mg/dL", ref: "8,5–10,5", alt: true },
+      { nome: "PTH", valor: "elevado", ref: "normal", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Raquitismo", C: "Osteomalácia por deficiência de D", D: "Escorbuto" },
+      correta: "C", explicacao: "D baixa + cálcio baixo + PTH elevado = osteomalácia." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: D + cálcio + sol + dieta + fitoterápicos + exercício." },
+    carta: "Doutor(a), eu tinha medo do sol. Você me ensinou que ele é remédio. Meus ossos pararam de doer.\n\nRosa"
+  },
+
+  // CASO 11 — CAIO
+  { id: 11, paciente: "Caio, 28 anos, fisiculturista, treina à noite",
+    queixa: "Minhas pernas dão cãibra e meu coração falha.",
+    sintomas: "Cãibras, tremores, insônia, arritmia.",
+    dietas: {
+      A: "Dieta Rica em Magnésio: Folhas verdes, castanhas, sementes, cacau.",
+      B: "Dieta de Atleta Pobre em Magnésio: Whey, frango, arroz branco, batata-doce. Zero folhas, castanhas, cacau. Sudorese intensa.",
+      C: "Dieta Cetogênica: Baixo carbo, alto gordura.",
+      D: "Dieta Vegetariana: Leguminosas, ovos."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Caio?", correta: "B", explicacao: "Sudorese + dieta pobre em Mg = hipomagnesemia." },
+    ilustracao: "Músculos com fasciculações. Tremor palpebral. ECG com arritmia.",
+    exames: [
+      { nome: "Magnésio", valor: "1,1 mg/dL", ref: "1,7–2,2", alt: true },
+      { nome: "Potássio", valor: "3,2 mEq/L", ref: "3,5–5,0", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Hipomagnesemia por sudorese", B: "Anemia", C: "Escorbuto", D: "Beribéri" },
+      correta: "A", explicacao: "Mg baixo por sudorese + dieta pobre." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: Mg + K + dieta + eletrólitos + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que era só treinar mais. Você me mostrou que o corpo precisa de minerais. Treino sem cãibras.\n\nCaio"
+  },
+
+  // CASO 12 — BIA
+  { id: 12, paciente: "Bia, 16 anos, fast-food todos os dias há 3 anos",
+    queixa: "Minha gengiva sangra quando escovo os dentes e eu vivo com roxos nas pernas.",
+    sintomas: "Sangramento gengival, equimoses, feridas que não cicatrizam, dor articular.",
+    dietas: {
+      A: "Dieta Fast-Food Moderna: Hambúrguer, batata frita, refrigerante; milkshake + cookie; pizza ou frango frito; salgadinho. Zero frutas, verduras.",
+      B: "Dieta Vegetariana: Frutas, verduras, leguminosas, ovos, leite.",
+      C: "Dieta Hiperproteica: Carnes, ovos, queijos, whey — com salada.",
+      D: "Dieta Mediterrânea: Azeite, peixes, frutas, verduras."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Bia?", correta: "A", explicacao: "Zero vitamina C = escorbuto." },
+    ilustracao: "Gengivas hiperemiadas, sangrando. Equimoses nas pernas. Cabelos em saca-rolha. Articulações edemaciadas.",
+    exames: [
+      { nome: "Vitamina C", valor: "0,1 mg/dL", ref: "0,4–2,0", alt: true },
+      { nome: "Hemoglobina", valor: "10,8 g/dL", ref: "12–16", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Escorbuto (deficiência de vitamina C)", C: "Raquitismo", D: "Beribéri" },
+      correta: "B", explicacao: "Vitamina C baixa + sangramento gengival = escorbuto." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia (acerola)", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: vitamina C + dieta + acerola + fitoterápicos + apoio psicológico." },
+    carta: "Doutor(a), eu achava que fast-food era liberdade. Você me mostrou que era prisão. Hoje como laranja, acerola.\n\nBia"
+  },
+
+  // CASO 13 — SR. NILTON
+  { id: 13, paciente: "Sr. Nilton, 55 anos, tabagista há 30 anos",
+    queixa: "Minha pele está velha, minhas feridas não saram e eu vivo cansado.",
+    sintomas: "Rugas, pele seca, feridas de cicatrização lenta, cansaço.",
+    dietas: {
+      A: "Dieta do Fumante: Café preto + cigarro; arroz, feijão, carne, zero salada; macarrão. Zero frutas, vegetais.",
+      B: "Dieta Rica em Antioxidantes: Frutas cítricas, cenoura, tomate, azeite.",
+      C: "Dieta Mediterrânea: Azeite, peixes, frutas, verduras.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, frutas."
+    },
+    q1: { pergunta: "Qual dieta agravou a carência do Sr. Nilton?", correta: "A", explicacao: "Cigarro destrói vitamina C e E. Dieta pobre agrava." },
+    ilustracao: "Pele enrugada, seca, manchas senis. Dedos amarelados. Cabelos finos.",
+    exames: [
+      { nome: "Vitamina C", valor: "0,2 mg/dL", ref: "0,4–2,0", alt: true },
+      { nome: "Vitamina E", valor: "4 µg/mL", ref: "5–18", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Deficiência de vitaminas C e E", C: "Escorbuto isolado", D: "Raquitismo" },
+      correta: "B", explicacao: "C e E baixas por tabagismo + dieta pobre." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: C + E + dieta antioxidante + apoio para cessar tabagismo + acupuntura." },
+    carta: "Doutor(a), eu achava que cigarro era só vício. Você me mostrou que era ladrão de vitaminas. Minha pele agradece.\n\nNilton"
+  },
+
+  // CASO 14 — TIA ZEFA
+  { id: 14, paciente: "Tia Zefa, 80 anos, dieta restrita do interior",
+    queixa: "Eu vivo esquecida e cansada. Acho que é velhice.",
+    sintomas: "Palidez, cansaço, esquecimento, língua lisa, diarreia.",
+    dietas: {
+      A: "Dieta Balanceada: Arroz, feijão, carne, ovos, frutas, verduras.",
+      B: "Dieta Vegetariana: Leguminosas, ovos, leite, folhas.",
+      C: "Dieta Hiperproteica: Carnes, ovos, queijos.",
+      D: "Dieta Restrita do Interior: Café com farinha; arroz, feijão, farinha. Zero carnes, ovos, folhas, frutas."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Tia Zefa?", correta: "D", explicacao: "Dieta pobre em folato (folhas verdes, leguminosas)." },
+    ilustracao: "Pele pálida, amarelada. Língua lisa, vermelha. Cabelos brancos finos.",
+    exames: [
+      { nome: "Hemoglobina", valor: "8,5 g/dL", ref: "12–16", alt: true },
+      { nome: "VCM", valor: "115 fL", ref: "80–100", alt: true },
+      { nome: "Folato", valor: "2,0 ng/mL", ref: "4–20", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia ferropriva", B: "Anemia megaloblástica por folato", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "VCM alto + folato baixo = megaloblástica por folato." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: ácido fólico + dieta + B12 + fitoterápicos + acompanhamento social." },
+    carta: "Doutor(a), eu achava que comer era só matar a fome. Você me mostrou que é remédio. Minha cabeça está mais clara.\n\nZefa"
+  },
+
+  // CASO 15 — GAEL
+  { id: 15, paciente: "Gael, 5 anos, nunca sai ao sol",
+    queixa: "As pernas dele estão entortando e ele reclama de dor.",
+    sintomas: "Pernas arqueadas, dor óssea, atraso no crescimento, rosário raquítico.",
+    dietas: {
+      A: "Dieta Balanceada Infantil + Sol: Leite, ovos, peixe, frutas, brincadeiras ao ar livre.",
+      B: "Dieta de Apartamento: Leite com achocolatado; arroz, feijão, frango; macarrão. Zero sol, zero peixes, zero ovos.",
+      C: "Dieta Rica em Cálcio: Leite, queijo, iogurte, brócolis + sol.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, leite + sol."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Gael?", correta: "B", explicacao: "Zero sol = zero vitamina D = raquitismo." },
+    ilustracao: "Pernas arqueadas (genu varum). Rosário raquítico. Punhos alargados. Crânio mole.",
+    exames: [
+      { nome: "25-OH-D", valor: "5 ng/mL", ref: "> 30", alt: true },
+      { nome: "Cálcio", valor: "7,8 mg/dL", ref: "8,5–10,5", alt: true },
+      { nome: "Fósforo", valor: "2,5 mg/dL", ref: "4,5–5,5", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Raquitismo por deficiência de vitamina D", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "D baixa + cálcio baixo + fósforo baixo = raquitismo." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: vitamina D + cálcio + sol + dieta + brincadeiras + fitoterápicos." },
+    carta: "Tio(a) Nutri, agora eu brinco no parque todos os dias! Minhas pernas pararam de doer. O sol é meu amigo.\n\nGael"
+  },
+
+  // CASO 16 — VERA
+  { id: 16, paciente: "Vera, 39 anos, gestante de gêmeos (28 semanas)",
+    queixa: "Estou muito cansada e com falta de ar. Acho que é normal da gravidez.",
+    sintomas: "Palidez, cansaço, falta de ar, tontura, unhas quebradiças.",
+    dietas: {
+      A: "Dieta Balanceada para Gestante: Carne, feijão, folhas verdes, frutas cítricas, leite, ovos.",
+      B: "Dieta Vegetariana: Leguminosas, ovos, leite, folhas.",
+      C: "Dieta de Gestante Sem Suplementação: Pão com margarina; arroz, feijão, frango; macarrão. Zero suplementação de ferro e folato.",
+      D: "Dieta Hiperproteica: Carnes, ovos, queijos."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Vera?", correta: "C", explicacao: "Gravidez gemelar aumenta demanda. Sem suplementação = anemia." },
+    ilustracao: "Pele pálida, amarelada. Conjuntivas descoradas. Língua lisa, vermelha. Unhas coiloníquia.",
+    exames: [
+      { nome: "Hemoglobina", valor: "8,0 g/dL", ref: "11–14", alt: true },
+      { nome: "Ferritina", valor: "6 ng/mL", ref: "30–300", alt: true },
+      { nome: "Folato", valor: "2,5 ng/mL", ref: "4–20", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia ferropriva isolada", B: "Anemia megaloblástica + ferropriva", C: "Escorbuto", D: "Raquitismo" },
+      correta: "B", explicacao: "Ferro e folato baixos = anemia mista." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: ferro + folato + B12 + dieta + fitoterápicos + pré-natal rigoroso." },
+    carta: "Doutor(a), eu achava que gravidez era só esperar. Você me mostrou que é construir. Meus gêmeos nasceram saudáveis.\n\nVera"
+  },
+
+  // CASO 17 — SR. OSVALDO
+  { id: 17, paciente: "Sr. Osvaldo, 70 anos, doença renal crônica em hemodiálise",
+    queixa: "Minhas pernas doem, vivo com cãibra e meus ossos parecem fracos.",
+    sintomas: "Cãibras, dor óssea, fraqueza, prurido, fraturas, calcificação vascular.",
+    dietas: {
+      A: "Dieta Renal sem Ajuste: Pão branco; arroz, frango, batata (sem descarte); macarrão. Zero leite, queijo, sol, suplementação de D. Rica em fósforo.",
+      B: "Dieta Renal Ajustada: Arroz, feijão (com descarte), carnes magras, legumes cozidos com descarte, suplementação de D e cálcio.",
+      C: "Dieta Hiperproteica: Carnes, ovos, queijos — sem ajuste renal.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, leite — sem ajuste renal."
+    },
+    q1: { pergunta: "Qual dieta agravou o quadro do Sr. Osvaldo?", correta: "A", explicacao: "Rim doente não ativa vitamina D. Dieta sem suplementação + alto fósforo = osteodistrofia." },
+    ilustracao: "Pele acinzentada com prurido. Calcificações subcutâneas. Dedos com deformidade óssea.",
+    exames: [
+      { nome: "Cálcio", valor: "7,8 mg/dL", ref: "8,5–10,5", alt: true },
+      { nome: "Fósforo", valor: "6,8 mg/dL", ref: "2,5–4,5", alt: true },
+      { nome: "PTH", valor: "650 pg/mL", ref: "15–65", alt: true },
+      { nome: "25-OH-D", valor: "10 ng/mL", ref: "> 30", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Osteodistrofia renal", C: "Escorbuto", D: "Raquitismo clássico" },
+      correta: "B", explicacao: "Cálcio baixo + fósforo alto + PTH alto = osteodistrofia renal." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: calcitriol + quelante de fósforo + dieta renal + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que rim doente era só diálise. Você me mostrou que era o corpo inteiro pedindo ajuda.\n\nOsvaldo"
+  },
+
+  // CASO 18 — ÍRIS
+  { id: 18, paciente: "Íris, 22 anos, dieta macrobiótica restritiva há 4 anos",
+    queixa: "Minhas mãos formigam e eu vivo cansada. Acho que é desintoxicação.",
+    sintomas: "Formigamento, palidez, cansaço, língua lisa, perda de memória.",
+    dietas: {
+      A: "Dieta Macrobiótica Completa: Arroz integral, feijão, missô, algas, tofu, vegetais, sementes — com suplementação de B12.",
+      B: "Dieta Macrobiótica Restritiva: Arroz integral, missô, algas, vegetais cozidos. Zero carne, ovos, leite, peixe, suplementação.",
+      C: "Dieta Vegetariana: Leguminosas, ovos, leite, frutas.",
+      D: "Dieta Vegana Fortificada: Leguminosas, cereais, leite de soja fortificado, suplementação."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Íris?", correta: "B", explicacao: "Macrobiótica restritiva sem B12 = anemia + neuropatia." },
+    ilustracao: "Pele pálida, amarelada. Língua lisa, vermelha. Reflexos diminuídos. Memória comprometida.",
+    exames: [
+      { nome: "B12", valor: "80 pg/mL", ref: "200–900", alt: true },
+      { nome: "VCM", valor: "114 fL", ref: "80–100", alt: true },
+      { nome: "Homocisteína", valor: "28 µmol/L", ref: "< 15", alt: true },
+      { nome: "Zinco", valor: "58 µg/dL", ref: "70–120", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia megaloblástica por B12 + neuropatia + deficiência de zinco", B: "Anemia ferropriva", C: "Escorbuto", D: "Beribéri" },
+      correta: "A", explicacao: "B12 baixa + VCM alto + homocisteína alta = megaloblástica. Zinco baixo." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: B12 IM + zinco + folato + dieta adaptada + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que estava purificando meu corpo. Você me mostrou que estava enfraquecendo. Minhas mãos pararam de formigar.\n\nÍris"
+  },
+
+  // CASO 19 — BETO
+  { id: 19, paciente: "Beto, 50 anos, pós-cirurgia abdominal, antibiótico há 14 dias",
+    queixa: "Estou sangrando muito e com roxos. Acho que é da cirurgia.",
+    sintomas: "Sangramento excessivo, equimoses, sangramento gengival.",
+    dietas: {
+      A: "Dieta Balanceada: Folhas verdes, carnes, ovos, frutas.",
+      B: "Dieta Hiperproteica: Carnes, ovos, queijos, whey.",
+      C: "Dieta Hospitalar sem Folhas Verdes: Arroz, frango, purê, gelatina. Zero folhas. Antibiótico destruiu flora intestinal.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, leite."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Beto?", correta: "C", explicacao: "Antibiótico destrói flora que produz vitamina K. Dieta sem folhas = deficiência de K." },
+    ilustracao: "Equimoses grandes nos braços. Gengivas sangrando. Ferida cirúrgica com sangramento ativo.",
+    exames: [
+      { nome: "Tempo de protrombina", valor: "18s", ref: "11–13s", alt: true },
+      { nome: "INR", valor: "1,8", ref: "0,8–1,2", alt: true },
+      { nome: "Vitamina K", valor: "0,1 ng/mL", ref: "0,2–2,0", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Deficiência de vitamina K por antibioticoterapia", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "TP/INR alargados + vitamina K baixa = deficiência de K." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: vitamina K IV + dieta + probióticos + fitoterápicos + acompanhamento cirúrgico." },
+    carta: "Doutor(a), eu achava que o antibiótico era só para me curar. Você me mostrou que ele também podia me fazer sangrar.\n\nBeto"
+  },
+
+  // CASO 20 — DONA LÚCIA
+  { id: 20, paciente: "Dona Lúcia, 60 anos, hipotireoidismo, região com solo pobre em iodo",
+    queixa: "Estou cansada, com frio, meu cabelo cai e meu pescoço inchou.",
+    sintomas: "Cansaço, intolerância ao frio, pele seca, queda de cabelo, bócio, voz rouca.",
+    dietas: {
+      A: "Dieta com Sal sem Iodo + Bociogênicos: Pão com margarina; arroz, feijão, repolho, couve-flor; mandioca, nabo. Usa sal sem iodo. Muitos crucíferos crus.",
+      B: "Dieta com Sal Iodado + Peixes: Sal iodado, peixes, ovos, laticínios, algas.",
+      C: "Dieta Vegetariana: Leguminosas, ovos, leite, sal iodado.",
+      D: "Dieta Hiperproteica: Carnes, ovos, queijos, sal iodado."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Dona Lúcia?", correta: "A", explicacao: "Sal sem iodo + crucíferos crus = bócio por deficiência de iodo." },
+    ilustracao: "Pescoço aumentado (bócio). Pele seca, áspera. Cabelos secos, com falhas. Face edemaciada.",
+    exames: [
+      { nome: "TSH", valor: "12 mUI/L", ref: "0,4–4,0", alt: true },
+      { nome: "T4 livre", valor: "0,5 ng/dL", ref: "0,8–1,8", alt: true },
+      { nome: "Iodo urinário", valor: "45 µg/L", ref: "100–300", alt: true },
+      { nome: "Selênio", valor: "60 µg/L", ref: "70–150", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Hipotireoidismo por deficiência de iodo e selênio", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "TSH alto + T4 baixo + iodo baixo = hipotireoidismo por iodo." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: levotiroxina + iodo + selênio + dieta + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que era só a idade. Você me mostrou que era o iodo que faltava. Meu pescoço desinchou.\n\nLúcia"
+  },
+
+  // CASO 21 — NANDO
+  { id: 21, paciente: "Nando, 30 anos, dieta carnívora estrita há 2 anos",
+    queixa: "Minha gengiva sangra e eu vivo com roxos.",
+    sintomas: "Sangramento gengival, equimoses, cansaço, dor articular, queda de cabelo.",
+    dietas: {
+      A: "Dieta Balanceada: Carnes, vegetais, frutas, cereais.",
+      B: "Dieta Vegetariana: Leguminosas, ovos, leite, frutas.",
+      C: "Dieta Carnívora Estrita: Ovos com bacon; bife com bife; costela com frango. Zero frutas, vegetais, cereais.",
+      D: "Dieta Low Carb com Vegetais: Carnes, ovos, folhas verdes, abacate."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Nando?", correta: "C", explicacao: "Dieta carnívora zero em vitamina C e folato = escorbuto + deficiência de folato." },
+    ilustracao: "Gengivas hiperemiadas, sangrando. Equimoses nas pernas. Cabelos em saca-rolha.",
+    exames: [
+      { nome: "Vitamina C", valor: "0,1 mg/dL", ref: "0,4–2,0", alt: true },
+      { nome: "Folato", valor: "2,2 ng/mL", ref: "4–20", alt: true },
+      { nome: "VCM", valor: "105 fL", ref: "80–100", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Escorbuto + deficiência de folato", B: "Anemia ferropriva", C: "Raquitismo", D: "Beribéri" },
+      correta: "A", explicacao: "Vitamina C baixa + folato baixo = escorbuto + deficiência de folato." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: vitamina C + folato + dieta com vegetais + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que carne era tudo. Você me mostrou que sem vegetais, o corpo desmorona. Minha gengiva parou de sangrar.\n\nNando"
+  },
+
+  // CASO 22 — SOFIA
+  { id: 22, paciente: "Sofia, 12 anos, vegetariana estrita sem suplementação",
+    queixa: "Ela está muito pálida e cansada. Não quer comer carne, ovos nem leite.",
+    sintomas: "Palidez, cansaço, falta de ar, unhas quebradiças, queda de cabelo, dificuldade de concentração.",
+    dietas: {
+      A: "Dieta Vegetariana Completa: Leite de soja fortificado, pão integral, mamão; arroz, feijão, tofu, couve, laranja; castanhas; lentilha, abóbora, espinafre. Suplementa B12 e ferro.",
+      B: "Dieta Vegetariana Restritiva: Pão branco com margarina; arroz, feijão, salada de alface; bolacha; macarrão com molho. Zero ovos, leite, leguminosas cozidas, suplementação.",
+      C: "Dieta Onívora Balanceada: Carne, ovos, leite, frutas, vegetais.",
+      D: "Dieta Fast-Food Vegetariana: Pizza, hambúrguer de soja, batata frita, refrigerante."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Sofia?", correta: "B", explicacao: "Dieta vegetariana restritiva sem suplementação = anemia ferropriva + megaloblástica." },
+    ilustracao: "Pele pálida, amarelada. Conjuntivas descoradas. Língua lisa, vermelha. Unhas coiloníquia.",
+    exames: [
+      { nome: "Hemoglobina", valor: "8,8 g/dL", ref: "12–16", alt: true },
+      { nome: "Ferritina", valor: "7 ng/mL", ref: "30–300", alt: true },
+      { nome: "VCM", valor: "108 fL", ref: "80–100", alt: true },
+      { nome: "B12", valor: "150 pg/mL", ref: "200–900", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia ferropriva + megaloblástica por B12", B: "Anemia ferropriva isolada", C: "Escorbuto", D: "Raquitismo" },
+      correta: "A", explicacao: "Ferritina baixa + VCM alto + B12 baixa = anemia mista." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: ferro + B12 + vitamina C + dieta fortificada + fitoterápicos + acompanhamento." },
+    carta: "Doutor(a), eu achava que ser vegetariana era só não comer carne. Você me mostrou que era preciso comer com inteligência. Minhas notas melhoraram.\n\nSofia"
+  },
+
+  // CASO 23 — SR. WALDIR
+  { id: 23, paciente: "Sr. Waldir, 65 anos, Parkinson em uso de levodopa há 5 anos",
+    queixa: "Estou confuso e minhas mãos formigam. Acho que é da doença.",
+    sintomas: "Confusão mental, formigamento, convulsões leves, dermatite seborreica, glossite.",
+    dietas: {
+      A: "Dieta Balanceada: Carnes, ovos, cereais integrais, frutas, vegetais.",
+      B: "Dieta Hiperproteica: Carnes, ovos, queijos, whey.",
+      C: "Dieta Pobre em B6: Pão branco; arroz branco, frango, batata; macarrão. Zero cereais integrais, banana, batata-doce, fígado.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, cereais integrais."
+    },
+    q1: { pergunta: "Qual dieta agravou a carência do Sr. Waldir?", correta: "C", explicacao: "Dieta refinada + levodopa (que compete com B6) = deficiência de B6." },
+    ilustracao: "Dermatite seborreica no rosto e couro cabeludo. Língua glossite. Tremores. Confusão.",
+    exames: [
+      { nome: "Vitamina B6", valor: "4 ng/mL", ref: "5–30", alt: true },
+      { nome: "Ácido xanturênico", valor: "elevado", ref: "normal", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Deficiência de vitamina B6", C: "Escorbuto", D: "Beribéri" },
+      correta: "B", explicacao: "B6 baixa + dermatite + confusão = deficiência de B6." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: piridoxina + dieta rica em B6 + complexo B + fitoterápicos + acupuntura." },
+    carta: "Doutor(a), eu achava que era só o Parkinson. Você me mostrou que era a vitamina B6 que faltava. Minha cabeça está mais clara.\n\nWaldir"
+  },
+
+  // CASO 24 — CLARA
+  { id: 24, paciente: "Clara, 27 anos, lactante exclusiva há 6 meses",
+    queixa: "Minha visão está embaçada e eu vivo cansada. Acho que é da amamentação.",
+    sintomas: "Visão turva, cegueira noturna, cansaço, queda de cabelo, dor óssea.",
+    dietas: {
+      A: "Dieta de Lactante Pobre em A e D: Pão com margarina; arroz, feijão, frango; macarrão. Zero cenoura, abóbora, peixes, ovos, sol.",
+      B: "Dieta Balanceada de Lactante: Leite, ovos, peixes, cenoura, frutas, sol.",
+      C: "Dieta Vegetariana: Leguminosas, ovos, leite, cenoura.",
+      D: "Dieta Hiperproteica: Carnes, ovos, queijos."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Clara?", correta: "A", explicacao: "Lactação consome reservas de A e D. Dieta pobre + zero sol = deficiência." },
+    ilustracao: "Conjuntiva seca com manchas de Bitot. Visão turva. Pele seca. Cabelos quebradiços.",
+    exames: [
+      { nome: "Retinol", valor: "0,5 µmol/L", ref: "1,05–2,80", alt: true },
+      { nome: "25-OH-D", valor: "12 ng/mL", ref: "> 30", alt: true },
+      { nome: "Cálcio", valor: "8,3 mg/dL", ref: "8,5–10,5", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Deficiência de vitaminas A e D por lactação", B: "Anemia ferropriva", C: "Escorbuto", D: "Beribéri" },
+      correta: "A", explicacao: "Retinol baixo + vitamina D baixa = deficiência de A e D." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: retinol + D + cálcio + dieta + sol + fitoterápicos + acompanhamento." },
+    carta: "Doutor(a), eu achava que amamentar era só dar o peito. Você me mostrou que eu precisava me nutrir para nutrir. Minha visão voltou.\n\nClara"
+  },
+
+  // CASO 25 — TIO BENTO
+  { id: 25, paciente: "Tio Bento, 75 anos, viúvo, isolamento social há 3 anos",
+    queixa: "Não sinto mais gosto na comida e minhas feridas não saram. Acho que é velhice.",
+    sintomas: "Perda de paladar, feridas que não cicatrizam, queda de cabelo, diarreia, fraqueza, depressão.",
+    dietas: {
+      A: "Dieta Balanceada: Carnes, ovos, frutas, vegetais, cereais.",
+      B: "Dieta da Solidão: Café com pão; arroz com ovo (quando lembra); pão com chá. Zero carnes, frutas, vegetais, leite. Não sai de casa.",
+      C: "Dieta Hiperproteica: Carnes, ovos, queijos.",
+      D: "Dieta Vegetariana: Leguminosas, ovos, leite."
+    },
+    q1: { pergunta: "Qual dieta causou a doença de Tio Bento?", correta: "B", explicacao: "Dieta pobre em zinco, proteína e D + isolamento social." },
+    ilustracao: "Pele seca com feridas que não cicatrizam. Cabelos ralos. Língua lisa, perda de papilas. Caquexia.",
+    exames: [
+      { nome: "Zinco", valor: "50 µg/dL", ref: "70–120", alt: true },
+      { nome: "Albumina", valor: "2,9 g/dL", ref: "3,5–5,0", alt: true },
+      { nome: "25-OH-D", valor: "14 ng/mL", ref: "> 30", alt: true },
+      { nome: "IMC", valor: "16,5", ref: "18,5–24,9", alt: true }
+    ],
+    q2: { pergunta: "Qual é a patologia?",
+      opcoes: { A: "Anemia", B: "Raquitismo", C: "Deficiência de zinco + desnutrição + deficiência de D", D: "Escorbuto" },
+      correta: "C", explicacao: "Zinco baixo + albumina baixa + D baixa + IMC baixo = desnutrição + deficiências." },
+    q3: { pergunta: "Qual protocolo você escolhe?",
+      opcoes: { A: "Dietoterapia Ocidental", B: "Fitoterapia", C: "MTC", D: "Sinergia Integrativa Completa" },
+      correta: "D", explicacao: "Sinergia: zinco + proteína + D + dieta + fitoterápicos + acupuntura + apoio psicológico e social." },
+    carta: "Doutor(a), eu achava que velhice era só esperar a morte. Você me mostrou que era fome de comida e de companhia. Minhas feridas sararam e meu coração também.\n\nBento"
+  }
+];
+
+// ==================== ESTADO DO JOGO ====================
+let estado = { casoAtual: 0, rodada: 1, moedas: 0, respondeu: false, recompensaDada: false };
+
+// ==================== FUNÇÕES ====================
+function renderizar() {
+  const caso = casos[estado.casoAtual];
+  const content = document.getElementById('gameContent');
+  const roundIndicator = document.getElementById('roundIndicator');
+  const progressFill = document.getElementById('progressFill');
+  
+  document.getElementById('caseDisplay').textContent = `Caso ${estado.casoAtual + 1}/${casos.length}`;
+  document.getElementById('coinsDisplay').textContent = `💎 ${estado.moedas}`;
+  progressFill.style.width = `${((estado.casoAtual * 4 + estado.rodada) / (casos.length * 4)) * 100}%`;
+  
+  if (estado.rodada === 1) { roundIndicator.textContent = "RODADA 1 DE 4 — ANAMNESE"; renderRodada1(caso, content); }
+  else if (estado.rodada === 2) { roundIndicator.textContent = "RODADA 2 DE 4 — SEMIOLOGIA"; renderRodada2(caso, content); }
+  else if (estado.rodada === 3) { roundIndicator.textContent = "RODADA 3 DE 4 — TRATAMENTO"; renderRodada3(caso, content); }
+  else if (estado.rodada === 4) { roundIndicator.textContent = "RODADA 4 DE 4 — DESFECHO"; renderRodada4(caso, content); }
+}
+
+function renderRodada1(caso, content) {
+  content.innerHTML = `
+    <div class="patient-card">
+      <h2>🩺 ${caso.paciente}</h2>
+      <p><strong>Queixa principal:</strong></p>
+      <div class="complaint">"${caso.queixa}"</div>
+      <p style="margin-top:10px;"><strong>Sintomas:</strong> ${caso.sintomas}</p>
+    </div>
+    <div class="question-box">❓ <strong>PERGUNTA 1:</strong> ${caso.q1.pergunta}</div>
+    <div class="options">
+      ${Object.entries(caso.dietas).map(([l, t]) => `<div class="option" onclick="responder('${l}','${caso.q1.correta}','${caso.q1.explicacao.replace(/'/g,"\\'")}')"><div class="option-letter">${l}</div><div>${t}</div></div>`).join('')}
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn hidden" id="nextBtn" onclick="proximaRodada()">PRÓXIMA RODADA →</button>
+  `;
+}
+
+function renderRodada2(caso, content) {
+  content.innerHTML = `
+    <div class="patient-card">
+      <h2>👁️ Ilustração Digital da Carência</h2>
+      <div class="ilustration"><strong>🔬 SINAIS CLÍNICOS:</strong><br><br>${caso.ilustracao}</div>
+      <h3 style="margin-top:15px;">📊 Exames Laboratoriais</h3>
+      <div class="exams"><table><thead><tr><th>Exame</th><th>Resultado</th><th>Referência</th></tr></thead><tbody>
+        ${caso.exames.map(e => `<tr><td>${e.nome}</td><td class="${e.alt?'altered':''}">${e.valor}</td><td>${e.ref}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>
+    <div class="question-box">❓ <strong>PERGUNTA 2:</strong> ${caso.q2.pergunta}</div>
+    <div class="options">
+      ${Object.entries(caso.q2.opcoes).map(([l, t]) => `<div class="option" onclick="responder('${l}','${caso.q2.correta}','${caso.q2.explicacao.replace(/'/g,"\\'")}')"><div class="option-letter">${l}</div><div>${t}</div></div>`).join('')}
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn hidden" id="nextBtn" onclick="proximaRodada()">PRÓXIMA RODADA →</button>
+  `;
+}
+
+function renderRodada3(caso, content) {
+  content.innerHTML = `
+    <div class="patient-card"><h2>💉 Protocolo de Tratamento Integrativo</h2><p>Hora de intervir. Escolha o melhor protocolo.</p></div>
+    <div class="question-box">❓ <strong>PERGUNTA 3:</strong> ${caso.q3.pergunta}</div>
+    <div class="options">
+      ${Object.entries(caso.q3.opcoes).map(([l, t]) => `<div class="option" onclick="responder('${l}','${caso.q3.correta}','${caso.q3.explicacao.replace(/'/g,"\\'")}')"><div class="option-letter">${l}</div><div>${t}</div></div>`).join('')}
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn hidden" id="nextBtn" onclick="proximaRodada()">VER DESFECHO →</button>
+  `;
+}
+
+function renderRodada4(caso, content) {
+  content.innerHTML = `
+    <div class="victory">
+      <div class="confetti">🎉🎊🏆🎊🎉</div>
+      <h1>VITÓRIA!</h1>
+      <p style="font-size:1.1em; margin-bottom:20px;">Você salvou o paciente!</p>
+      <div class="letter"><h3>💌 Carta de Recompensa</h3><p style="white-space: pre-line;">${caso.carta}</p></div>
+      <div style="background:#FFD93D; padding:15px; border-radius:12px; margin:20px 0;">
+        <strong>🏅 Selo Desbloqueado: Detetive Nutricional</strong><br>
+        <strong>💎 +500 Moedas Vita</strong>
+      </div>
+      <button class="btn" onclick="proximoCaso()">PRÓXIMO CASO →</button>
+    </div>
+  `;
+  if (!estado.recompensaDada) {
+    estado.moedas += 500;
+    estado.recompensaDada = true;
+    document.getElementById('coinsDisplay').textContent = `💎 ${estado.moedas}`;
+  }
+}
+
+function responder(letra, correta, explicacao) {
+  if (estado.respondeu) return;
+  estado.respondeu = true;
+  const options = document.querySelectorAll('.option');
+  const feedback = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  options.forEach(opt => {
+    const optLetra = opt.querySelector('.option-letter').textContent;
+    opt.classList.add('disabled');
+    if (optLetra === correta) opt.classList.add('correct');
+    else if (optLetra === letra && letra !== correta) opt.classList.add('wrong');
+  });
+  
+  if (letra === correta) {
+    feedback.className = 'feedback success show';
+    feedback.innerHTML = `✅ <strong>Correto!</strong><br><br>${explicacao}`;
+    nextBtn.classList.remove('hidden');
+  } else {
+    feedback.className = 'feedback error show';
+    feedback.innerHTML = `❌ <strong>Incorreto.</strong> A resposta correta era <strong>${correta}</strong>.<br><br>${explicacao}<br><br><em>O paciente piorou. Reinicie o caso.</em>`;
+    const btnReiniciar = document.createElement('button');
+    btnReiniciar.className = 'btn';
+    btnReiniciar.textContent = 'REINICIAR CASO';
+    btnReiniciar.onclick = reiniciarCaso;
+    feedback.appendChild(btnReiniciar);
+  }
+}
+
+function proximaRodada() { estado.rodada++; estado.respondeu = false; renderizar(); window.scrollTo(0,0); }
+function proximoCaso() {
+  estado.casoAtual++; estado.rodada = 1; estado.respondeu = false; estado.recompensaDada = false;
+  if (estado.casoAtual >= casos.length) { finalizarJogo(); return; }
+  renderizar(); window.scrollTo(0,0);
+}
+function reiniciarCaso() { estado.rodada = 1; estado.respondeu = false; estado.recompensaDada = false; renderizar(); window.scrollTo(0,0); }
+
+function finalizarJogo() {
+  document.getElementById('gameContent').innerHTML = `
+    <div class="victory">
+      <div class="confetti">🏆🎉🏆🎉🏆</div>
+      <h1>PARABÉNS, DETETIVE!</h1>
+      <p style="font-size:1.1em; margin:20px 0;">Você completou todos os 25 casos!</p>
+      <div style="background:#FFD93D; padding:20px; border-radius:12px; margin:20px 0;">
+        <strong style="font-size:1.3em;">💎 Total de Moedas Vita: ${estado.moedas}</strong>
+      </div>
+      <button class="btn" onclick="location.reload()">JOGAR NOVAMENTE</button>
+    </div>
+  `;
+  document.getElementById('progressFill').style.width = "100%";
+  document.getElementById('roundIndicator').textContent = "FIM DO JOGO";
+}
+
+renderizar();
+</script>
+</body>
+</html>
